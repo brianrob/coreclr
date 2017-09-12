@@ -113,6 +113,14 @@ namespace Microsoft.Win32
     [SuppressUnmanagedCodeSecurityAttribute()]
     internal static class Win32Native
     {
+        internal const String ADVAPI32 = "advapi32.dll";
+        internal const String SHELL32 = "shell32.dll";
+        internal const String SHIM = "mscoree.dll";
+        internal const String CRYPT32 = "crypt32.dll";
+        internal const String SECUR32 = "secur32.dll";
+        internal const String MSCORWKS = "coreclr.dll";
+
+#if !ES_BUILD_STANDALONE
         internal const int KEY_QUERY_VALUE = 0x0001;
         internal const int KEY_SET_VALUE = 0x0002;
         internal const int KEY_CREATE_SUB_KEY = 0x0004;
@@ -441,13 +449,6 @@ namespace Microsoft.Win32
             internal uint Type;
         }
 
-        internal const String ADVAPI32 = "advapi32.dll";
-        internal const String SHELL32 = "shell32.dll";
-        internal const String SHIM = "mscoree.dll";
-        internal const String CRYPT32 = "crypt32.dll";
-        internal const String SECUR32 = "secur32.dll";
-        internal const String MSCORWKS = "coreclr.dll";
-
         [DllImport(Interop.Libraries.Kernel32, EntryPoint = "LocalAlloc")]
         internal static extern IntPtr LocalAlloc_NoSafeHandle(int uFlags, UIntPtr sizetdwBytes);
 
@@ -701,10 +702,12 @@ namespace Microsoft.Win32
 
         [DllImport(Interop.Libraries.Kernel32, CharSet = CharSet.Unicode)]
         internal static unsafe extern bool FreeEnvironmentStrings(char* pStrings);
+#endif
 
         [DllImport(Interop.Libraries.Kernel32, CharSet = CharSet.Auto, SetLastError = true)]
         internal static extern uint GetCurrentProcessId();
 
+#if !ES_BUILD_STANDALONE
         [DllImport(Interop.Libraries.Ole32)]
         internal extern static int CoCreateGuid(out Guid guid);
 
@@ -803,5 +806,6 @@ namespace Microsoft.Win32
         internal static extern bool VerifyVersionInfoW([In, Out] OSVERSIONINFOEX lpVersionInfo, uint dwTypeMask, ulong dwlConditionMask);
         [DllImport("kernel32.dll")]
         internal static extern ulong VerSetConditionMask(ulong dwlConditionMask, uint dwTypeBitMask, byte dwConditionMask);        
+#endif
     }
 }

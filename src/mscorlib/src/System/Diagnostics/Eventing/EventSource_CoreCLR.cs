@@ -2,12 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Reflection;
 using Microsoft.Win32;
 
+#if ES_BUILD_STANDALONE
+namespace Microsoft.Diagnostics.Tracing
+#else
 namespace System.Diagnostics.Tracing
+#endif
 {
     public partial class EventSource
     {
@@ -148,7 +153,7 @@ namespace System.Diagnostics.Tracing
 
         private static string GetResourceString(string key, params object[] args)
         {
-            return SR.Format(SR.GetResourceString(key), args);
+            return string.Format(Resources.GetResourceString(key), args);
         }
 
         private static readonly bool m_EventSourcePreventRecursion = false;
@@ -234,7 +239,7 @@ namespace System.Diagnostics.Tracing
     {
         internal static string GetResourceString(string key, params object[] args)
         {
-            return SR.Format(SR.GetResourceString(key), args);
+            return string.Format(Resources.GetResourceString(key), args);
         }
     }
 }
