@@ -211,7 +211,7 @@ void EventPipe::EnableOnStartup()
     CONTRACTL_END;
 
     // Test COMPLUS variable to enable tracing at start-up.
-    if((CLRConfig::GetConfigValue(CLRConfig::INTERNAL_PerformanceTracing) & 1) == 1)
+    if((CLRConfig::GetConfigValue(CLRConfig::INTERNAL_EnableEventPipe) & 1) == 1)
     {
         SString outputPath;
         outputPath.Printf("Process-%d.netperf", GetCurrentProcessId());
@@ -275,7 +275,7 @@ void EventPipe::Enable(
     s_pFile = new EventPipeFile(eventPipeFileOutputPath);
 
 #ifdef _DEBUG
-    if((CLRConfig::GetConfigValue(CLRConfig::INTERNAL_PerformanceTracing) & 2) == 2)
+    if((CLRConfig::GetConfigValue(CLRConfig::INTERNAL_EnableEventPipe) & 2) == 2)
     {
         // Create a synchronous file.
         SString eventPipeSyncFileOutputPath;

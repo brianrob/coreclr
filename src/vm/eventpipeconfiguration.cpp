@@ -510,7 +510,7 @@ EventPipeEnabledProviderList::EventPipeEnabledProviderList(
 
     // Test COMPLUS variable to enable tracing at start-up.
     // If tracing is enabled at start-up create the catch-all provider and always return it.
-    if((CLRConfig::GetConfigValue(CLRConfig::INTERNAL_PerformanceTracing) & 1) == 1)
+    if((CLRConfig::GetConfigValue(CLRConfig::INTERNAL_EnableEventPipe) & 1) == 1)
     {
         m_pCatchAllProvider = new EventPipeEnabledProvider();
         m_pCatchAllProvider->Set(NULL, 0xFFFFFFFFFFFFFFFF, EventPipeEventLevel::Verbose);

@@ -952,7 +952,8 @@ RETAIL_CONFIG_DWORD_INFO(EXTERNAL_AllowDComReflection, W("AllowDComReflection"),
 //
 // Performance Tracing
 //
-RETAIL_CONFIG_DWORD_INFO(INTERNAL_PerformanceTracing, W("PerformanceTracing"), 0, "Enable/disable performance tracing.  Non-zero values enable tracing.")
+RETAIL_CONFIG_DWORD_INFO(INTERNAL_EnableEventPipe, W("EnableEventPipe"), 0, "Enable/disable event pipe.  Non-zero values enable tracing.")
+RETAIL_CONFIG_STRING_INFO(INTERNAL_EventPipeConfig, W("EventPipeConfig"), "Configuration for EventPipe.")
 
 #ifdef FEATURE_GDBJIT
 //
