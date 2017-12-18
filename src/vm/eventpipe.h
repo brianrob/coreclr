@@ -18,6 +18,7 @@ class EventPipeProvider;
 class MethodDesc;
 class SampleProfilerEventInstance;
 struct EventPipeProviderConfiguration;
+class EventPipeSession;
 
 // Define the event pipe callback to match the ETW callback signature.
 typedef void (*EventPipeCallback)(
@@ -286,6 +287,7 @@ class EventPipe
         static CrstStatic s_configCrst;
         static bool s_tracingInitialized;
         static EventPipeConfiguration *s_pConfig;
+        static EventPipeSession *s_pSession;
         static EventPipeBufferManager *s_pBufferManager;
         static EventPipeFile *s_pFile;
 #ifdef _DEBUG

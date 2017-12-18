@@ -40,7 +40,7 @@ EventPipeConfiguration::~EventPipeConfiguration()
     }
     if(m_pSession != NULL)
     {
-        delete(m_pSession);
+        DeleteSession(m_pSession);
         m_pSession = NULL;
     }
 
@@ -291,22 +291,36 @@ size_t EventPipeConfiguration::GetCircularBufferSize() const
     return ret;
 }
 
-void EventPipeConfiguration::Enable(
-    unsigned int circularBufferSizeInMB,
-    EventPipeProviderConfiguration *pProviders,
-    int numProviders)
+EventPipeSession* EventPipeConfiguration::CreateSession(unsigned int circularBufferSizeInMB, EventPipeProviderConfiguration *pProviders, unsigned int numProviders)
+{
+    LIMITED_METHOD_CONTRACT;
+    return new EventPipeSession(circularBufferSizeInMB, pProviders, numProviders);
+}
+
+void EventPipeConfiguration::DeleteSession(EventPipeSession *pSession)
+{
+    LIMITED_METHOD_CONTRACT;
+    // TODO: Multiple session support will require individual enabled bits.
+    if(pSession != NULL && !m_enabled)
+    {
+        delete(pSession);
+    }
+}
+
+void EventPipeConfiguration::Enable(EventPipeSession *pSession)
 {
     CONTRACTL
     {
         THROWS;
         GC_NOTRIGGER;
         MODE_ANY;
+        PRECONDITION(pSession != NULL);
         // Lock must be held by EventPipe::Enable.
         PRECONDITION(EventPipe::GetLock()->OwnedByCurrentThread());
     }
     CONTRACTL_END;
 
-    m_pSession = new EventPipeSession(circularBufferSizeInMB, pProviders, static_cast<unsigned int>(numProviders));
+    m_pSession = pSession;
     m_enabled = true;
 
     // The provider list should be non-NULL, but can be NULL on shutdown.
@@ -332,13 +346,16 @@ void EventPipeConfiguration::Enable(
     }
 }
 
-void EventPipeConfiguration::Disable()
+void EventPipeConfiguration::Disable(EventPipeSession *pSession)
 {
     CONTRACTL
     {
         THROWS;
         GC_NOTRIGGER;
         MODE_ANY;
+        // TODO: Multiple session support will require that the session be specified.
+        PRECONDITION(pSession != NULL);
+        PRECONDITION(pSession == s_pSession);
         // Lock must be held by EventPipe::Disable.
         PRECONDITION(EventPipe::GetLock()->OwnedByCurrentThread());
     }
@@ -359,12 +376,7 @@ void EventPipeConfiguration::Disable()
 
     m_enabled = false;
     m_rundownEnabled = false;
-
-    if(m_pSession != NULL)
-    {
-        delete(m_pSession);
-        m_pSession = NULL;
-    }
+    m_pSession = NULL;
 }
 
 bool EventPipeConfiguration::Enabled() const
@@ -379,13 +391,14 @@ bool EventPipeConfiguration::RundownEnabled() const
     return m_rundownEnabled;
 }
 
-void EventPipeConfiguration::EnableRundown()
+void EventPipeConfiguration::EnableRundown(EventPipeSession *pSession)
 {
     CONTRACTL
     {
         THROWS;
         GC_NOTRIGGER;
         MODE_ANY;
+        PRECONDITION(pSession != NULL);
         // Lock must be held by EventPipe::Disable.
         PRECONDITION(EventPipe::GetLock()->OwnedByCurrentThread());
     }
@@ -393,19 +406,13 @@ void EventPipeConfiguration::EnableRundown()
 
     // Build the rundown configuration.
     _ASSERTE(m_pSession == NULL);
-    const unsigned int numRundownProviders = 2;
-    EventPipeProviderConfiguration rundownProviders[] =
-    {
-        { W("Microsoft-Windows-DotNETRuntime"), 0x80020138, static_cast<unsigned int>(EventPipeEventLevel::Verbose) }, // Public provider.
-        { W("Microsoft-Windows-DotNETRuntimeRundown"), 0x80020138, static_cast<unsigned int>(EventPipeEventLevel::Verbose) } // Rundown provider.
-    };
 
     // Enable rundown.
     // TODO: Move this into EventPipeSession once Enable takes an EventPipeSession object.
     m_rundownEnabled = true;
 
-    // Enable tracing.  The circular buffer size doesn't matter because we're going to write all events synchronously during rundown.
-    Enable(1 /* circularBufferSizeInMB */, rundownProviders, numRundownProviders);
+    // Enable tracing.
+    Enable(pSession);
 }
 
 EventPipeEventInstance* EventPipeConfiguration::BuildEventMetadataEvent(EventPipeEventInstance &sourceInstance)

@@ -51,17 +51,20 @@ public:
     // Get the provider with the specified provider ID if it exists.
     EventPipeProvider* GetProvider(const SString &providerID);
 
+    // Create a new session.
+    EventPipeSession* CreateSession(unsigned int circularBufferSizeInMB, EventPipeProviderConfiguration *pProviders, unsigned int numProviders);
+
+    // Delete a session.
+    void DeleteSession(EventPipeSession *pSession);
+
     // Get the configured size of the circular buffer.
     size_t GetCircularBufferSize() const;
 
-    // Enable the event pipe.
-    void Enable(
-        unsigned int circularBufferSizeInMB,
-        EventPipeProviderConfiguration *pProviders,
-        int numProviders);
+    // Enable a session in the event pipe.
+    void Enable(EventPipeSession *pSession);
 
-    // Disable the event pipe.
-    void Disable();
+    // Disable a session in the event pipe.
+    void Disable(EventPipeSession *pSession);
 
     // Get the status of the event pipe.
     bool Enabled() const;
@@ -69,8 +72,8 @@ public:
     // Determine if rundown is enabled.
     bool RundownEnabled() const;
 
-    // Enable the well-defined symbolic rundown configuration.
-    void EnableRundown();
+    // Enable rundown using the specified configuration.
+    void EnableRundown(EventPipeSession *pSession);
 
     // Get the event used to write metadata to the event stream.
     EventPipeEventInstance* BuildEventMetadataEvent(EventPipeEventInstance &sourceInstance);

@@ -11,6 +11,7 @@
 #include "eventpipeevent.h"
 #include "eventpipefile.h"
 #include "eventpipeprovider.h"
+#include "eventpipesession.h"
 #include "eventpipejsonfile.h"
 #include "sampleprofiler.h"
 
@@ -23,6 +24,7 @@
 CrstStatic EventPipe::s_configCrst;
 bool EventPipe::s_tracingInitialized = false;
 EventPipeConfiguration* EventPipe::s_pConfig = NULL;
+EventPipeSession* EventPipe::s_pSession = NULL;
 EventPipeBufferManager* EventPipe::s_pBufferManager = NULL;
 EventPipeFile* EventPipe::s_pFile = NULL;
 #ifdef _DEBUG
@@ -290,7 +292,8 @@ void EventPipe::Enable(
 #endif // _DEBUG
 
     // Enable tracing.
-    s_pConfig->Enable(circularBufferSizeInMB, pProviders, numProviders);
+    s_pSession = s_pConfig->CreateSession(circularBufferSizeInMB, pProviders, static_cast<unsigned int>(numProviders));
+    s_pConfig->Enable(s_pSession);
 
     // Enable the sample profiler
     SampleProfiler::Enable();
@@ -318,7 +321,11 @@ void EventPipe::Disable()
         SampleProfiler::Disable();
 
         // Disable tracing.
-        s_pConfig->Disable();
+        s_pConfig->Disable(s_pSession);
+
+        // Delete the session.
+        s_pConfig->DeleteSession(s_pSession);
+        s_pSession = NULL;
 
         // Flush all write buffers to make sure that all threads see the change.
         FlushProcessWriteBuffers();
@@ -329,7 +336,15 @@ void EventPipe::Disable()
         s_pBufferManager->WriteAllBuffersToFile(s_pFile, disableTimeStamp);
 
         // Before closing the file, do rundown.
-        s_pConfig->EnableRundown();
+        const unsigned int numRundownProviders = 2;
+        EventPipeProviderConfiguration rundownProviders[] =
+        {
+            { W("Microsoft-Windows-DotNETRuntime"), 0x80020138, static_cast<unsigned int>(EventPipeEventLevel::Verbose) }, // Public provider.
+            { W("Microsoft-Windows-DotNETRuntimeRundown"), 0x80020138, static_cast<unsigned int>(EventPipeEventLevel::Verbose) } // Rundown provider.
+        };
+        // The circular buffer size doesn't matter because all events are written synchronously during rundown.
+        s_pSession = s_pConfig->CreateSession(1 /* circularBufferSizeInMB */, rundownProviders, numRundownProviders);
+        s_pConfig->EnableRundown(s_pSession);
 
         // Ask the runtime to emit rundown events.
         if(g_fEEStarted && !g_fEEShutDown)
@@ -338,7 +353,11 @@ void EventPipe::Disable()
         }
 
         // Disable the event pipe now that rundown is complete.
-        s_pConfig->Disable();
+        s_pConfig->Disable(s_pSession);
+
+        // Delete the rundown session.
+        s_pConfig->DeleteSession(s_pSession);
+        s_pSession = NULL;
 
         if(s_pFile != NULL)
         {
