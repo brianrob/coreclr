@@ -14,6 +14,7 @@ class EventPipeEvent;
 class EventPipeEventInstance;
 class EventPipeProvider;
 struct EventPipeProviderConfiguration;
+class EventPipeSession;
 
 enum class EventPipeEventLevel
 {
@@ -53,9 +54,6 @@ public:
     // Get the configured size of the circular buffer.
     size_t GetCircularBufferSize() const;
 
-    // Set the configured size of the circular buffer.
-    void SetCircularBufferSize(size_t circularBufferSize);
-
     // Enable the event pipe.
     void Enable(
         unsigned int circularBufferSizeInMB,
@@ -85,15 +83,14 @@ private:
     // Get the provider without taking the lock.
     EventPipeProvider* GetProviderNoLock(const SString &providerID);
 
+    // Get the enabled provider.
+    EventPipeEnabledProvider* GetEnabledProviderForSession(EventPipeSession *pSession, EventPipeProvider *pProvider);
+
+    // The one and only EventPipe session.
+    EventPipeSession *m_pSession;
+
     // Determines whether or not the event pipe is enabled.
     Volatile<bool> m_enabled;
-
-    // The configured size of the circular buffer.
-    size_t m_circularBufferSizeInBytes;
-
-    // EventPipeConfiguration only supports a single session.
-    // This is the set of configurations for each enabled provider.
-    EventPipeEnabledProviderList *m_pEnabledProviderList;
 
     // The list of event pipe providers.
     SList<SListElem<EventPipeProvider*>> *m_pProviderList;

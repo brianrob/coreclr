@@ -7,6 +7,7 @@
 #include "eventpipeconfiguration.h"
 #include "eventpipeeventinstance.h"
 #include "eventpipeprovider.h"
+#include "eventpipesession.h"
 
 #ifdef FEATURE_PERFTRACING
 
@@ -18,8 +19,7 @@ EventPipeConfiguration::EventPipeConfiguration()
 
     m_enabled = false;
     m_rundownEnabled = false;
-    m_circularBufferSizeInBytes = 1024 * 1024 * 1000; // Default to 1000MB.
-    m_pEnabledProviderList = NULL;
+    m_pSession = NULL;
     m_pProviderList = new SList<SListElem<EventPipeProvider*>>();
 }
 
@@ -38,11 +38,10 @@ EventPipeConfiguration::~EventPipeConfiguration()
         delete(m_pConfigProvider);
         m_pConfigProvider = NULL;
     }
-
-    if(m_pEnabledProviderList != NULL)
+    if(m_pSession != NULL)
     {
-        delete(m_pEnabledProviderList);
-        m_pEnabledProviderList = NULL;
+        delete(m_pSession);
+        m_pSession = NULL;
     }
 
     if(m_pProviderList != NULL)
@@ -156,10 +155,10 @@ bool EventPipeConfiguration::RegisterProvider(EventPipeProvider &provider)
         m_pProviderList->InsertTail(new SListElem<EventPipeProvider*>(&provider));
     }
 
-    // Set the provider configuration and enable it if we know anything about the provider before it is registered.
-    if(m_pEnabledProviderList != NULL)
+    // Set the provider configuration and enable it if it has been requested by a session.
+    if(m_pSession != NULL)
     {
-        EventPipeEnabledProvider *pEnabledProvider = m_pEnabledProviderList->GetEnabledProvider(&provider);
+        EventPipeEnabledProvider *pEnabledProvider = GetEnabledProviderForSession(m_pSession, &provider);
         if(pEnabledProvider != NULL)
         {
             provider.SetConfiguration(
@@ -261,21 +260,35 @@ EventPipeProvider* EventPipeConfiguration::GetProviderNoLock(const SString &prov
     return NULL;
 }
 
+EventPipeEnabledProvider* EventPipeConfiguration::GetEnabledProviderForSession(EventPipeSession *pSession, EventPipeProvider *pProvider)
+{
+    CONTRACTL
+    {
+        THROWS;
+        GC_TRIGGERS;
+        MODE_ANY;
+        PRECONDITION(EventPipe::GetLock()->OwnedByCurrentThread());
+    }
+    CONTRACTL_END;
+
+    EventPipeEnabledProvider *pRet = NULL;
+    if(pSession != NULL)
+    {
+       pRet = pSession->GetEnabledProvider(pProvider);
+    }
+    return pRet;
+}
+
 size_t EventPipeConfiguration::GetCircularBufferSize() const
 {
     LIMITED_METHOD_CONTRACT;
 
-    return m_circularBufferSizeInBytes;
-}
-
-void EventPipeConfiguration::SetCircularBufferSize(size_t circularBufferSize)
-{
-    LIMITED_METHOD_CONTRACT;
-    
-    if(!m_enabled)
+    size_t ret = 0;
+    if(m_pSession != NULL)
     {
-        m_circularBufferSizeInBytes = circularBufferSize;
+        ret = m_pSession->GetCircularBufferSize();
     }
+    return ret;
 }
 
 void EventPipeConfiguration::Enable(
@@ -293,8 +306,7 @@ void EventPipeConfiguration::Enable(
     }
     CONTRACTL_END;
 
-    m_circularBufferSizeInBytes = circularBufferSizeInMB * 1024 * 1024;
-    m_pEnabledProviderList = new EventPipeEnabledProviderList(pProviders, static_cast<unsigned int>(numProviders));
+    m_pSession = new EventPipeSession(circularBufferSizeInMB, pProviders, static_cast<unsigned int>(numProviders));
     m_enabled = true;
 
     // The provider list should be non-NULL, but can be NULL on shutdown.
@@ -306,7 +318,7 @@ void EventPipeConfiguration::Enable(
             EventPipeProvider *pProvider = pElem->GetValue();
 
             // Enable the provider if it has been configured.
-            EventPipeEnabledProvider *pEnabledProvider = m_pEnabledProviderList->GetEnabledProvider(pProvider);
+            EventPipeEnabledProvider *pEnabledProvider = GetEnabledProviderForSession(m_pSession, pProvider);
             if(pEnabledProvider != NULL)
             {
                 pProvider->SetConfiguration(
@@ -348,11 +360,10 @@ void EventPipeConfiguration::Disable()
     m_enabled = false;
     m_rundownEnabled = false;
 
-    // Free the enabled providers list.
-    if(m_pEnabledProviderList != NULL)
+    if(m_pSession != NULL)
     {
-        delete(m_pEnabledProviderList);
-        m_pEnabledProviderList = NULL;
+        delete(m_pSession);
+        m_pSession = NULL;
     }
 }
 
@@ -381,7 +392,7 @@ void EventPipeConfiguration::EnableRundown()
     CONTRACTL_END;
 
     // Build the rundown configuration.
-    _ASSERTE(m_pEnabledProviderList == NULL);
+    _ASSERTE(m_pSession == NULL);
     const unsigned int numRundownProviders = 2;
     EventPipeProviderConfiguration rundownProviders[] =
     {
@@ -390,6 +401,7 @@ void EventPipeConfiguration::EnableRundown()
     };
 
     // Enable rundown.
+    // TODO: Move this into EventPipeSession once Enable takes an EventPipeSession object.
     m_rundownEnabled = true;
 
     // Enable tracing.  The circular buffer size doesn't matter because we're going to write all events synchronously during rundown.
