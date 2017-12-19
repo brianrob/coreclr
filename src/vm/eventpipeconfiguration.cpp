@@ -513,7 +513,7 @@ void EventPipeConfiguration::DeleteDeferredProviders()
     }
 }
 
-EventPipeEnabledProviderList::EventPipeEnabledProviderList(
+EventPipeSessionProviderList::EventPipeSessionProviderList(
     EventPipeProviderConfiguration *pConfigs,
     unsigned int numConfigs)
 {
@@ -555,7 +555,7 @@ EventPipeEnabledProviderList::EventPipeEnabledProviderList(
     }
 }
 
-EventPipeEnabledProviderList::~EventPipeEnabledProviderList()
+EventPipeSessionProviderList::~EventPipeSessionProviderList()
 {
     CONTRACTL
     {
@@ -577,7 +577,7 @@ EventPipeEnabledProviderList::~EventPipeEnabledProviderList()
     }
 }
 
-EventPipeSessionProvider* EventPipeEnabledProviderList::GetSessionProvider(
+EventPipeSessionProvider* EventPipeSessionProviderList::GetSessionProvider(
     EventPipeProvider *pProvider)
 {
     CONTRACTL

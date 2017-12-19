@@ -10,8 +10,8 @@
 class EventPipeSession
 {
 private:
-    // The set of configurations for each enabled provider.
-    EventPipeEnabledProviderList *m_pProviderList;
+    // The set of configurations for each provider in the session.
+    EventPipeSessionProviderList *m_pProviderList;
 
     // The configured size of the circular buffer.
     size_t m_circularBufferSizeInBytes;
@@ -30,7 +30,7 @@ public:
         LIMITED_METHOD_CONTRACT;
         m_circularBufferSizeInBytes = circularBufferSizeInMB * 1024; // 1MB;
         m_rundownEnabled = false;
-        m_pProviderList = new EventPipeEnabledProviderList(
+        m_pProviderList = new EventPipeSessionProviderList(
             pProviders,
             numProviders);
     }

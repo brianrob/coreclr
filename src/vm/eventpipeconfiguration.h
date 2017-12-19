@@ -112,7 +112,7 @@ private:
     Volatile<bool> m_rundownEnabled;
 };
 
-class EventPipeEnabledProviderList
+class EventPipeSessionProviderList
 {
 
 private:
@@ -130,8 +130,8 @@ private:
 public:
 
     // Create a new list based on the input.
-    EventPipeEnabledProviderList(EventPipeProviderConfiguration *pConfigs, unsigned int numConfigs);
-    ~EventPipeEnabledProviderList();
+    EventPipeSessionProviderList(EventPipeProviderConfiguration *pConfigs, unsigned int numConfigs);
+    ~EventPipeSessionProviderList();
 
     // Get the session provider for the specified provider.
     // Return NULL if one doesn't exist.
