@@ -7,6 +7,11 @@
 
 #ifdef FEATURE_PERFTRACING
 
+enum class EventPipeEventLevel;
+struct EventPipeProviderConfiguration;
+class EventPipeSessionProviderList;
+class EventPipeSessionProvider;
+
 class EventPipeSession
 {
 private:
@@ -25,25 +30,9 @@ public:
     EventPipeSession(
         unsigned int circularBufferSizeInMB,
         EventPipeProviderConfiguration *pProviders,
-        unsigned int numProviders)
-    {
-        LIMITED_METHOD_CONTRACT;
-        m_circularBufferSizeInBytes = circularBufferSizeInMB * 1024; // 1MB;
-        m_rundownEnabled = false;
-        m_pProviderList = new EventPipeSessionProviderList(
-            pProviders,
-            numProviders);
-    }
+        unsigned int numProviders);
 
-    ~EventPipeSession()
-    {
-        LIMITED_METHOD_CONTRACT;
-        if(m_pProviderList != NULL)
-        {
-            delete m_pProviderList;
-            m_pProviderList = NULL;
-        }
-    }
+    ~EventPipeSession();
 
     // Get the configured size of the circular buffer.
     size_t GetCircularBufferSize() const
@@ -67,11 +56,60 @@ public:
     }
 
     // Get the session provider for the specified provider if present.
-    EventPipeSessionProvider* GetSessionProvider(EventPipeProvider *pProvider)
-    {
-        LIMITED_METHOD_CONTRACT;
-        return m_pProviderList->GetSessionProvider(pProvider);
-    }
+    EventPipeSessionProvider* GetSessionProvider(EventPipeProvider *pProvider);
+};
+
+class EventPipeSessionProviderList
+{
+
+private:
+
+    // The number of providers in the list.
+    unsigned int m_numProviders;
+
+    // The list of providers.
+    EventPipeSessionProvider *m_pProviders;
+
+    // A catch-all provider used when tracing is enabled at start-up
+    // under (COMPlus_PerformanceTracing & 1) == 1.
+    EventPipeSessionProvider *m_pCatchAllProvider;
+
+public:
+
+    // Create a new list based on the input.
+    EventPipeSessionProviderList(EventPipeProviderConfiguration *pConfigs, unsigned int numConfigs);
+    ~EventPipeSessionProviderList();
+
+    // Get the session provider for the specified provider.
+    // Return NULL if one doesn't exist.
+    EventPipeSessionProvider* GetSessionProvider(EventPipeProvider *pProvider);
+};
+
+class EventPipeSessionProvider
+{
+private:
+
+    // The provider name.
+    WCHAR *m_pProviderName;
+
+    // The enabled keywords.
+    UINT64 m_keywords;
+
+    // The loging level.
+    EventPipeEventLevel m_loggingLevel;
+
+public:
+
+    EventPipeSessionProvider();
+    ~EventPipeSessionProvider();
+
+    void Set(LPCWSTR providerName, UINT64 keywords, EventPipeEventLevel loggingLevel);
+
+    LPCWSTR GetProviderName() const;
+
+    UINT64 GetKeywords() const;
+
+    EventPipeEventLevel GetLevel() const;
 };
 
 #endif // FEATURE_PERFTRACING

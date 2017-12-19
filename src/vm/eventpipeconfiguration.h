@@ -112,59 +112,6 @@ private:
     Volatile<bool> m_rundownEnabled;
 };
 
-class EventPipeSessionProviderList
-{
-
-private:
-
-    // The number of providers in the list.
-    unsigned int m_numProviders;
-
-    // The list of providers.
-    EventPipeSessionProvider *m_pProviders;
-
-    // A catch-all provider used when tracing is enabled at start-up
-    // under (COMPlus_PerformanceTracing & 1) == 1.
-    EventPipeSessionProvider *m_pCatchAllProvider;
-
-public:
-
-    // Create a new list based on the input.
-    EventPipeSessionProviderList(EventPipeProviderConfiguration *pConfigs, unsigned int numConfigs);
-    ~EventPipeSessionProviderList();
-
-    // Get the session provider for the specified provider.
-    // Return NULL if one doesn't exist.
-    EventPipeSessionProvider* GetSessionProvider(EventPipeProvider *pProvider);
-};
-
-class EventPipeSessionProvider
-{
-private:
-
-    // The provider name.
-    WCHAR *m_pProviderName;
-
-    // The enabled keywords.
-    UINT64 m_keywords;
-
-    // The loging level.
-    EventPipeEventLevel m_loggingLevel;
-
-public:
-
-    EventPipeSessionProvider();
-    ~EventPipeSessionProvider();
-
-    void Set(LPCWSTR providerName, UINT64 keywords, EventPipeEventLevel loggingLevel);
-
-    LPCWSTR GetProviderName() const;
-
-    UINT64 GetKeywords() const;
-
-    EventPipeEventLevel GetLevel() const;
-};
-
 #endif // FEATURE_PERFTRACING
 
 #endif // __EVENTPIPE_CONFIGURATION_H__
