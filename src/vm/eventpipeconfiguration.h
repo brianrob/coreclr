@@ -8,13 +8,13 @@
 
 #include "slist.h"
 
-class EventPipeEnabledProvider;
-class EventPipeEnabledProviderList;
+class EventPipeSessionProvider;
 class EventPipeEvent;
 class EventPipeEventInstance;
 class EventPipeProvider;
 struct EventPipeProviderConfiguration;
 class EventPipeSession;
+class EventPipeSessionProvider;
 
 enum class EventPipeEventLevel
 {
@@ -87,7 +87,7 @@ private:
     EventPipeProvider* GetProviderNoLock(const SString &providerID);
 
     // Get the enabled provider.
-    EventPipeEnabledProvider* GetEnabledProviderForSession(EventPipeSession *pSession, EventPipeProvider *pProvider);
+    EventPipeSessionProvider* GetSessionProvider(EventPipeSession *pSession, EventPipeProvider *pProvider);
 
     // The one and only EventPipe session.
     EventPipeSession *m_pSession;
@@ -121,11 +121,11 @@ private:
     unsigned int m_numProviders;
 
     // The list of providers.
-    EventPipeEnabledProvider *m_pProviders;
+    EventPipeSessionProvider *m_pProviders;
 
     // A catch-all provider used when tracing is enabled at start-up
     // under (COMPlus_PerformanceTracing & 1) == 1.
-    EventPipeEnabledProvider *m_pCatchAllProvider;
+    EventPipeSessionProvider *m_pCatchAllProvider;
 
 public:
 
@@ -133,12 +133,12 @@ public:
     EventPipeEnabledProviderList(EventPipeProviderConfiguration *pConfigs, unsigned int numConfigs);
     ~EventPipeEnabledProviderList();
 
-    // Get the enabled provider for the specified provider.
+    // Get the session provider for the specified provider.
     // Return NULL if one doesn't exist.
-    EventPipeEnabledProvider* GetEnabledProvider(EventPipeProvider *pProvider);
+    EventPipeSessionProvider* GetSessionProvider(EventPipeProvider *pProvider);
 };
 
-class EventPipeEnabledProvider
+class EventPipeSessionProvider
 {
 private:
 
@@ -153,8 +153,8 @@ private:
 
 public:
 
-    EventPipeEnabledProvider();
-    ~EventPipeEnabledProvider();
+    EventPipeSessionProvider();
+    ~EventPipeSessionProvider();
 
     void Set(LPCWSTR providerName, UINT64 keywords, EventPipeEventLevel loggingLevel);
 

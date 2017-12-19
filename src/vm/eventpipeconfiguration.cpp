@@ -158,13 +158,13 @@ bool EventPipeConfiguration::RegisterProvider(EventPipeProvider &provider)
     // Set the provider configuration and enable it if it has been requested by a session.
     if(m_pSession != NULL)
     {
-        EventPipeEnabledProvider *pEnabledProvider = GetEnabledProviderForSession(m_pSession, &provider);
-        if(pEnabledProvider != NULL)
+        EventPipeSessionProvider *pSessionProvider = GetSessionProvider(m_pSession, &provider);
+        if(pSessionProvider != NULL)
         {
             provider.SetConfiguration(
                 true /* providerEnabled */,
-                pEnabledProvider->GetKeywords(),
-                pEnabledProvider->GetLevel());
+                pSessionProvider->GetKeywords(),
+                pSessionProvider->GetLevel());
         }
     }
 
@@ -260,7 +260,7 @@ EventPipeProvider* EventPipeConfiguration::GetProviderNoLock(const SString &prov
     return NULL;
 }
 
-EventPipeEnabledProvider* EventPipeConfiguration::GetEnabledProviderForSession(EventPipeSession *pSession, EventPipeProvider *pProvider)
+EventPipeSessionProvider* EventPipeConfiguration::GetSessionProvider(EventPipeSession *pSession, EventPipeProvider *pProvider)
 {
     CONTRACTL
     {
@@ -271,10 +271,10 @@ EventPipeEnabledProvider* EventPipeConfiguration::GetEnabledProviderForSession(E
     }
     CONTRACTL_END;
 
-    EventPipeEnabledProvider *pRet = NULL;
+    EventPipeSessionProvider *pRet = NULL;
     if(pSession != NULL)
     {
-       pRet = pSession->GetEnabledProvider(pProvider);
+       pRet = pSession->GetSessionProvider(pProvider);
     }
     return pRet;
 }
@@ -332,13 +332,13 @@ void EventPipeConfiguration::Enable(EventPipeSession *pSession)
             EventPipeProvider *pProvider = pElem->GetValue();
 
             // Enable the provider if it has been configured.
-            EventPipeEnabledProvider *pEnabledProvider = GetEnabledProviderForSession(m_pSession, pProvider);
-            if(pEnabledProvider != NULL)
+            EventPipeSessionProvider *pSessionProvider = GetSessionProvider(m_pSession, pProvider);
+            if(pSessionProvider != NULL)
             {
                 pProvider->SetConfiguration(
                     true /* providerEnabled */,
-                    pEnabledProvider->GetKeywords(),
-                    pEnabledProvider->GetLevel());
+                    pSessionProvider->GetKeywords(),
+                    pSessionProvider->GetLevel());
             }
 
             pElem = m_pProviderList->GetNext(pElem);
@@ -533,7 +533,7 @@ EventPipeEnabledProviderList::EventPipeEnabledProviderList(
     // If tracing is enabled at start-up create the catch-all provider and always return it.
     if((CLRConfig::GetConfigValue(CLRConfig::INTERNAL_EnableEventPipe) & 1) == 1)
     {
-        m_pCatchAllProvider = new EventPipeEnabledProvider();
+        m_pCatchAllProvider = new EventPipeSessionProvider();
         m_pCatchAllProvider->Set(NULL, 0xFFFFFFFFFFFFFFFF, EventPipeEventLevel::Verbose);
         return;
     }
@@ -545,7 +545,7 @@ EventPipeEnabledProviderList::EventPipeEnabledProviderList(
         return;
     }
 
-    m_pProviders = new EventPipeEnabledProvider[m_numProviders];
+    m_pProviders = new EventPipeSessionProvider[m_numProviders];
     for(int i=0; i<m_numProviders; i++)
     {
         m_pProviders[i].Set(
@@ -577,7 +577,7 @@ EventPipeEnabledProviderList::~EventPipeEnabledProviderList()
     }
 }
 
-EventPipeEnabledProvider* EventPipeEnabledProviderList::GetEnabledProvider(
+EventPipeSessionProvider* EventPipeEnabledProviderList::GetSessionProvider(
     EventPipeProvider *pProvider)
 {
     CONTRACTL
@@ -602,31 +602,31 @@ EventPipeEnabledProvider* EventPipeEnabledProviderList::GetEnabledProvider(
     SString providerNameStr = pProvider->GetProviderName();
     LPCWSTR providerName = providerNameStr.GetUnicode();
 
-    EventPipeEnabledProvider *pEnabledProvider = NULL;
+    EventPipeSessionProvider *pSessionProvider = NULL;
     for(int i=0; i<m_numProviders; i++)
     {
-        EventPipeEnabledProvider *pCandidate = &m_pProviders[i];
+        EventPipeSessionProvider *pCandidate = &m_pProviders[i];
         if(pCandidate != NULL)
         {
             if(wcscmp(providerName, pCandidate->GetProviderName()) == 0)
             {
-                pEnabledProvider = pCandidate;
+                pSessionProvider = pCandidate;
                 break;
             }
         }
     }
 
-    return pEnabledProvider;
+    return pSessionProvider;
 }
 
-EventPipeEnabledProvider::EventPipeEnabledProvider()
+EventPipeSessionProvider::EventPipeSessionProvider()
 {
     LIMITED_METHOD_CONTRACT;
     m_pProviderName = NULL;
     m_keywords = 0;
 }
 
-EventPipeEnabledProvider::~EventPipeEnabledProvider()
+EventPipeSessionProvider::~EventPipeSessionProvider()
 {
     CONTRACTL
     {
@@ -643,7 +643,7 @@ EventPipeEnabledProvider::~EventPipeEnabledProvider()
     }
 }
 
-void EventPipeEnabledProvider::Set(LPCWSTR providerName, UINT64 keywords, EventPipeEventLevel loggingLevel)
+void EventPipeSessionProvider::Set(LPCWSTR providerName, UINT64 keywords, EventPipeEventLevel loggingLevel)
 {
     CONTRACTL
     {
@@ -669,19 +669,19 @@ void EventPipeEnabledProvider::Set(LPCWSTR providerName, UINT64 keywords, EventP
     m_loggingLevel = loggingLevel;
 }
 
-LPCWSTR EventPipeEnabledProvider::GetProviderName() const
+LPCWSTR EventPipeSessionProvider::GetProviderName() const
 {
     LIMITED_METHOD_CONTRACT;
     return m_pProviderName;
 }
 
-UINT64 EventPipeEnabledProvider::GetKeywords() const
+UINT64 EventPipeSessionProvider::GetKeywords() const
 {
     LIMITED_METHOD_CONTRACT;
     return m_keywords;
 }
 
-EventPipeEventLevel EventPipeEnabledProvider::GetLevel() const
+EventPipeEventLevel EventPipeSessionProvider::GetLevel() const
 {
     LIMITED_METHOD_CONTRACT;
     return m_loggingLevel;

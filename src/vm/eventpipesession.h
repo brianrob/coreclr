@@ -11,7 +11,7 @@ class EventPipeSession
 {
 private:
     // The set of configurations for each enabled provider.
-    EventPipeEnabledProviderList *m_pEnabledProviderList;
+    EventPipeEnabledProviderList *m_pProviderList;
 
     // The configured size of the circular buffer.
     size_t m_circularBufferSizeInBytes;
@@ -30,7 +30,7 @@ public:
         LIMITED_METHOD_CONTRACT;
         m_circularBufferSizeInBytes = circularBufferSizeInMB * 1024; // 1MB;
         m_rundownEnabled = false;
-        m_pEnabledProviderList = new EventPipeEnabledProviderList(
+        m_pProviderList = new EventPipeEnabledProviderList(
             pProviders,
             numProviders);
     }
@@ -38,10 +38,10 @@ public:
     ~EventPipeSession()
     {
         LIMITED_METHOD_CONTRACT;
-        if(m_pEnabledProviderList != NULL)
+        if(m_pProviderList != NULL)
         {
-            delete m_pEnabledProviderList;
-            m_pEnabledProviderList = NULL;
+            delete m_pProviderList;
+            m_pProviderList = NULL;
         }
     }
 
@@ -66,11 +66,11 @@ public:
         m_rundownEnabled = value;
     }
 
-    // Get the enabled provider for the specified provider if present.
-    EventPipeEnabledProvider* GetEnabledProvider(EventPipeProvider *pProvider)
+    // Get the session provider for the specified provider if present.
+    EventPipeSessionProvider* GetSessionProvider(EventPipeProvider *pProvider)
     {
         LIMITED_METHOD_CONTRACT;
-        return m_pEnabledProviderList->GetEnabledProvider(pProvider);
+        return m_pProviderList->GetSessionProvider(pProvider);
     }
 };
 
