@@ -64,11 +64,8 @@ class EventPipeSessionProviderList
 
 private:
 
-    // The number of providers in the list.
-    unsigned int m_numProviders;
-
     // The list of providers.
-    EventPipeSessionProvider *m_pProviders;
+    SList<SListElem<EventPipeSessionProvider*>> *m_pProviders;
 
     // A catch-all provider used when tracing is enabled at start-up
     // under (COMPlus_PerformanceTracing & 1) == 1.
@@ -79,6 +76,9 @@ public:
     // Create a new list based on the input.
     EventPipeSessionProviderList(EventPipeProviderConfiguration *pConfigs, unsigned int numConfigs);
     ~EventPipeSessionProviderList();
+
+    // Add a new session provider to the list.
+    void AddSessionProvider(EventPipeSessionProvider *pProvider);
 
     // Get the session provider for the specified provider.
     // Return NULL if one doesn't exist.
@@ -100,10 +100,11 @@ private:
 
 public:
 
-    EventPipeSessionProvider();
+    EventPipeSessionProvider(
+        LPCWSTR providerName,
+        UINT64 keywords,
+        EventPipeEventLevel loggingLevel);
     ~EventPipeSessionProvider();
-
-    void Set(LPCWSTR providerName, UINT64 keywords, EventPipeEventLevel loggingLevel);
 
     LPCWSTR GetProviderName() const;
 

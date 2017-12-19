@@ -50,33 +50,27 @@ EventPipeSessionProviderList::EventPipeSessionProviderList(
     }
     CONTRACTL_END;
 
-    m_pProviders = NULL;
+    m_pProviders = new SList<SListElem<EventPipeSessionProvider*>>();
     m_pCatchAllProvider = NULL;
-    m_numProviders = 0;
 
     // Test COMPLUS variable to enable tracing at start-up.
     // If tracing is enabled at start-up create the catch-all provider and always return it.
     if((CLRConfig::GetConfigValue(CLRConfig::INTERNAL_EnableEventPipe) & 1) == 1)
     {
-        m_pCatchAllProvider = new EventPipeSessionProvider();
-        m_pCatchAllProvider->Set(NULL, 0xFFFFFFFFFFFFFFFF, EventPipeEventLevel::Verbose);
+        m_pCatchAllProvider = new EventPipeSessionProvider(NULL, 0xFFFFFFFFFFFFFFFF, EventPipeEventLevel::Verbose);
         return;
     }
 
     m_pCatchAllProvider = NULL;
-    m_numProviders = numConfigs;
-    if(m_numProviders == 0)
+    for(unsigned int i=0; i<numConfigs; i++)
     {
-        return;
-    }
+        EventPipeProviderConfiguration *pConfig = &pConfigs[i];
+        EventPipeSessionProvider *pProvider = new EventPipeSessionProvider(
+            pConfig->GetProviderName(),
+            pConfig->GetKeywords(),
+            (EventPipeEventLevel)pConfig->GetLevel());
 
-    m_pProviders = new EventPipeSessionProvider[m_numProviders];
-    for(int i=0; i<m_numProviders; i++)
-    {
-        m_pProviders[i].Set(
-            pConfigs[i].GetProviderName(),
-            pConfigs[i].GetKeywords(),
-            (EventPipeEventLevel)pConfigs[i].GetLevel());
+        m_pProviders->InsertTail(new SListElem<EventPipeSessionProvider*>(pProvider));
     }
 }
 
@@ -92,13 +86,40 @@ EventPipeSessionProviderList::~EventPipeSessionProviderList()
 
     if(m_pProviders != NULL)
     {
-        delete[] m_pProviders;
+        SListElem<EventPipeSessionProvider*> *pElem = m_pProviders->GetHead();
+        while(pElem != NULL)
+        {
+            EventPipeSessionProvider *pProvider = pElem->GetValue();
+            delete pProvider;
+
+            SListElem<EventPipeSessionProvider*> *pCurElem = pElem;
+            pElem = m_pProviders->GetNext(pElem);
+            delete pCurElem;
+        }
+
+        delete m_pProviders;
         m_pProviders = NULL;
     }
     if(m_pCatchAllProvider != NULL)
     {
         delete(m_pCatchAllProvider);
         m_pCatchAllProvider = NULL;
+    }
+}
+
+void EventPipeSessionProviderList::AddSessionProvider(EventPipeSessionProvider *pProvider)
+{
+    CONTRACTL
+    {
+        THROWS;
+        GC_TRIGGERS;
+        MODE_ANY;
+    }
+    CONTRACTL_END;
+
+    if(pProvider != NULL)
+    {
+        m_pProviders->InsertTail(new SListElem<EventPipeSessionProvider*>(pProvider));
     }
 }
 
@@ -128,27 +149,43 @@ EventPipeSessionProvider* EventPipeSessionProviderList::GetSessionProvider(
     LPCWSTR providerName = providerNameStr.GetUnicode();
 
     EventPipeSessionProvider *pSessionProvider = NULL;
-    for(int i=0; i<m_numProviders; i++)
+    SListElem<EventPipeSessionProvider*> *pElem = m_pProviders->GetHead();
+    while(pElem != NULL)
     {
-        EventPipeSessionProvider *pCandidate = &m_pProviders[i];
-        if(pCandidate != NULL)
+        EventPipeSessionProvider *pCandidate = pElem->GetValue();
+        if(wcscmp(providerName, pCandidate->GetProviderName()) == 0)
         {
-            if(wcscmp(providerName, pCandidate->GetProviderName()) == 0)
-            {
-                pSessionProvider = pCandidate;
-                break;
-            }
+            pSessionProvider = pCandidate;
+            break;
         }
+        pElem = m_pProviders->GetNext(pElem);
     }
 
     return pSessionProvider;
 }
 
-EventPipeSessionProvider::EventPipeSessionProvider()
+EventPipeSessionProvider::EventPipeSessionProvider(
+    LPCWSTR providerName,
+    UINT64 keywords,
+    EventPipeEventLevel loggingLevel)
 {
-    LIMITED_METHOD_CONTRACT;
-    m_pProviderName = NULL;
-    m_keywords = 0;
+    CONTRACTL
+    {
+        THROWS;
+        GC_NOTRIGGER;
+        MODE_ANY;
+    }
+    CONTRACTL_END;
+
+    if(providerName != NULL)
+    {
+        unsigned int bufSize = wcslen(providerName) + 1;
+        m_pProviderName = new WCHAR[bufSize];
+        wcscpy_s(m_pProviderName, bufSize, providerName);
+    }
+    m_keywords = keywords;
+    m_loggingLevel = loggingLevel;
+
 }
 
 EventPipeSessionProvider::~EventPipeSessionProvider()
@@ -166,32 +203,6 @@ EventPipeSessionProvider::~EventPipeSessionProvider()
         delete[] m_pProviderName;
         m_pProviderName = NULL;
     }
-}
-
-void EventPipeSessionProvider::Set(LPCWSTR providerName, UINT64 keywords, EventPipeEventLevel loggingLevel)
-{
-    CONTRACTL
-    {
-        THROWS;
-        GC_NOTRIGGER;
-        MODE_ANY;
-    }
-    CONTRACTL_END;
-
-    if(m_pProviderName != NULL)
-    {
-        delete(m_pProviderName);
-        m_pProviderName = NULL;
-    }
-
-    if(providerName != NULL)
-    {
-        unsigned int bufSize = wcslen(providerName) + 1;
-        m_pProviderName = new WCHAR[bufSize];
-        wcscpy_s(m_pProviderName, bufSize, providerName);
-    }
-    m_keywords = keywords;
-    m_loggingLevel = loggingLevel;
 }
 
 LPCWSTR EventPipeSessionProvider::GetProviderName() const
