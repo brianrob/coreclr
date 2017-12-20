@@ -734,10 +734,14 @@ void EventPipe::GetConfigurationFromEnvironment(SString &outputPath, EventPipeSe
 {
     LIMITED_METHOD_CONTRACT;
 
-    // TODO: Read the output path.
+    // Set the output path if specified.
+    CLRConfigStringHolder wszOutputPath(CLRConfig::GetConfigValue(CLRConfig::INTERNAL_EventPipeOutputFile));
+    if(wszOutputPath != NULL)
+    {
+        outputPath.Set(wszOutputPath);
+    }
 
-
-    // Read the the provider configuration from the environment.
+    // Read the the provider configuration from the environment if specified.
     CLRConfigStringHolder wszConfig(CLRConfig::GetConfigValue(CLRConfig::INTERNAL_EventPipeConfig));
     if(wszConfig == NULL)
     {
