@@ -32,6 +32,18 @@ EventPipeSession::~EventPipeSession()
     }
 }
 
+void EventPipeSession::AddSessionProvider(EventPipeSessionProvider *pProvider)
+{
+    LIMITED_METHOD_CONTRACT;
+    m_pProviderList->AddSessionProvider(pProvider);
+}
+
+void EventPipeSession::EnableAllEvents()
+{
+    LIMITED_METHOD_CONTRACT;
+    m_pProviderList->EnableAllEvents();
+}
+
 EventPipeSessionProvider* EventPipeSession::GetSessionProvider(EventPipeProvider *pProvider)
 {
     LIMITED_METHOD_CONTRACT;
@@ -51,16 +63,6 @@ EventPipeSessionProviderList::EventPipeSessionProviderList(
     CONTRACTL_END;
 
     m_pProviders = new SList<SListElem<EventPipeSessionProvider*>>();
-    m_pCatchAllProvider = NULL;
-
-    // Test COMPLUS variable to enable tracing at start-up.
-    // If tracing is enabled at start-up create the catch-all provider and always return it.
-    if((CLRConfig::GetConfigValue(CLRConfig::INTERNAL_EnableEventPipe) & 1) == 1)
-    {
-        m_pCatchAllProvider = new EventPipeSessionProvider(NULL, 0xFFFFFFFFFFFFFFFF, EventPipeEventLevel::Verbose);
-        return;
-    }
-
     m_pCatchAllProvider = NULL;
     for(unsigned int i=0; i<numConfigs; i++)
     {
@@ -123,6 +125,16 @@ void EventPipeSessionProviderList::AddSessionProvider(EventPipeSessionProvider *
     }
 }
 
+void EventPipeSessionProviderList::EnableAllEvents()
+{
+    LIMITED_METHOD_CONTRACT;
+
+    if(m_pCatchAllProvider != NULL)
+    {
+        m_pCatchAllProvider = new EventPipeSessionProvider(NULL, 0xFFFFFFFFFFFFFFFF, EventPipeEventLevel::Verbose);
+    }
+}
+
 EventPipeSessionProvider* EventPipeSessionProviderList::GetSessionProvider(
     EventPipeProvider *pProvider)
 {
@@ -134,7 +146,7 @@ EventPipeSessionProvider* EventPipeSessionProviderList::GetSessionProvider(
     }
     CONTRACTL_END;
 
-    // If tracing was enabled on start-up, all events should be on (this is a diagnostic config).
+    // Exists when tracing was enabled at start-up and all events were requested. This is a diagnostic config.
     if(m_pCatchAllProvider != NULL)
     {
         return m_pCatchAllProvider;
@@ -182,6 +194,10 @@ EventPipeSessionProvider::EventPipeSessionProvider(
         unsigned int bufSize = wcslen(providerName) + 1;
         m_pProviderName = new WCHAR[bufSize];
         wcscpy_s(m_pProviderName, bufSize, providerName);
+    }
+    else
+    {
+        m_pProviderName = NULL;
     }
     m_keywords = keywords;
     m_loggingLevel = loggingLevel;

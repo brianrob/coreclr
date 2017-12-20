@@ -274,6 +274,13 @@ class EventPipe
 
     private:
 
+        // Enable the specified EventPipe session.
+        static void Enable(LPCWSTR strOutputPath, EventPipeSession *pSession);
+
+        // Get the EnableOnStartup configuration from environment.
+        static void GetConfigurationFromEnvironment(SString &outputPath, EventPipeSession *pSession);
+
+
         // Callback function for the stack walker.  For each frame walked, this callback is invoked.
         static StackWalkAction StackWalkCallback(CrawlFrame *pCf, StackContents *pData);
 

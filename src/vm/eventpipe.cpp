@@ -217,11 +217,18 @@ void EventPipe::EnableOnStartup()
     {
         SString outputPath;
         outputPath.Printf("Process-%d.netperf", GetCurrentProcessId());
-        Enable(
-            outputPath.GetUnicode(),
+
+        // Create a new session.
+        EventPipeSession *pSession = new EventPipeSession(
             1024 /* 1 GB circular buffer */,
-            NULL /* pProviders */,
+            NULL, /* pProviders */
             0 /* numProviders */);
+
+        // Get the configuration from the environment.
+        GetConfigurationFromEnvironment(outputPath, pSession);
+
+        // Enable the session.
+        Enable(outputPath, pSession);
     }
 }
 
@@ -263,6 +270,24 @@ void EventPipe::Enable(
     }
     CONTRACTL_END;
 
+    // Create a new session.
+    EventPipeSession *pSession = s_pConfig->CreateSession(circularBufferSizeInMB, pProviders, static_cast<unsigned int>(numProviders));
+
+    // Enable the session.
+    Enable(strOutputPath, pSession);
+}
+
+void EventPipe::Enable(LPCWSTR strOutputPath, EventPipeSession *pSession)
+{
+    CONTRACTL
+    {
+        THROWS;
+        GC_TRIGGERS;
+        MODE_ANY;
+        PRECONDITION(pSession != NULL);
+    }
+    CONTRACTL_END;
+
     // If tracing is not initialized or is already enabled, bail here.
     if(!s_tracingInitialized || s_pConfig->Enabled())
     {
@@ -291,8 +316,10 @@ void EventPipe::Enable(
     }
 #endif // _DEBUG
 
+    // Save the session.
+    s_pSession = pSession;
+
     // Enable tracing.
-    s_pSession = s_pConfig->CreateSession(circularBufferSizeInMB, pProviders, static_cast<unsigned int>(numProviders));
     s_pConfig->Enable(s_pSession);
 
     // Enable the sample profiler
@@ -701,6 +728,122 @@ CrstStatic* EventPipe::GetLock()
     LIMITED_METHOD_CONTRACT;
 
     return &s_configCrst;
+}
+
+void EventPipe::GetConfigurationFromEnvironment(SString &outputPath, EventPipeSession *pSession)
+{
+    LIMITED_METHOD_CONTRACT;
+
+    // TODO: Read the output path.
+
+
+    // Read the the provider configuration from the environment.
+    CLRConfigStringHolder wszConfig(CLRConfig::GetConfigValue(CLRConfig::INTERNAL_EventPipeConfig));
+    if(wszConfig == NULL)
+    {
+        pSession->EnableAllEvents();
+        return;
+    }
+
+    unsigned int len = wcslen(wszConfig);
+    if(len <= 0)
+    {
+        pSession->EnableAllEvents();
+        return;
+    }
+
+    // Parses a string with the following format:
+    //
+    //      ProviderName:Keywords:Level[,]*
+    //
+    // For example:
+    //
+    //      Microsoft-Windows-DotNETRuntime:0xCAFEBABE:2,Microsoft-Windows-DotNETRuntimePrivate:0xDEADBEEF:1
+    //
+    // Each provider configuration is separated by a ',' and each component within the configuration is
+    // separated by a ':'.
+
+    const WCHAR ProviderSeparatorChar = ',';
+    const WCHAR ComponentSeparatorChar = ':';
+    unsigned int index = 0;
+    WCHAR *pProviderName = NULL;
+    UINT64 keywords = 0;
+    EventPipeEventLevel level = EventPipeEventLevel::Critical;
+
+    while(index < len)
+    {
+        WCHAR * pCurrentChunk = &wszConfig[index];
+        unsigned int currentChunkStartIndex = index;
+        unsigned int currentChunkEndIndex = 0;
+
+        // Find the next chunk.
+        while(index < len && wszConfig[index] != ProviderSeparatorChar)
+        {
+            index++;
+        }
+        currentChunkEndIndex = index++;
+
+        // Split the chunk into components.
+        unsigned int chunkIndex = currentChunkStartIndex;
+
+        // Get the provider name.
+        unsigned int provNameStartIndex = chunkIndex;
+        unsigned int provNameEndIndex = currentChunkEndIndex;
+
+        while(chunkIndex < currentChunkEndIndex && wszConfig[chunkIndex] != ComponentSeparatorChar)
+        {
+            chunkIndex++;
+        }
+        provNameEndIndex = chunkIndex++;
+
+        unsigned int provNameLen = provNameEndIndex - provNameStartIndex;
+        pProviderName = new WCHAR[provNameLen+1];
+        memcpy(pProviderName, &wszConfig[provNameStartIndex], provNameLen*sizeof(WCHAR));
+        pProviderName[provNameLen] = '\0';
+
+        // Get the keywords.
+        unsigned int keywordsStartIndex = chunkIndex;
+        unsigned int keywordsEndIndex = currentChunkEndIndex;
+
+        while(chunkIndex < currentChunkEndIndex && wszConfig[chunkIndex] != ComponentSeparatorChar)
+        {
+            chunkIndex++;
+        }
+        keywordsEndIndex = chunkIndex++;
+
+        unsigned int keywordsLen = keywordsEndIndex - keywordsStartIndex;
+        WCHAR wszKeywords[keywordsLen+1];
+        memcpy(wszKeywords, &wszConfig[keywordsStartIndex], keywordsLen*sizeof(WCHAR));
+        wszKeywords[keywordsLen] = '\0';
+        keywords = _wcstoui64(wszKeywords, NULL, 16);
+
+        // Get the level.
+        unsigned int levelStartIndex = chunkIndex;
+        unsigned int levelEndIndex = currentChunkEndIndex;
+
+        while(chunkIndex < currentChunkEndIndex && wszConfig[chunkIndex] != ComponentSeparatorChar)
+        {
+            chunkIndex++;
+        }
+        levelEndIndex = chunkIndex++;
+
+        unsigned int levelLen = levelEndIndex - levelStartIndex;
+        WCHAR wszLevel[levelLen+1];
+        memcpy(wszLevel, &wszConfig[levelStartIndex], levelLen*sizeof(WCHAR));
+        wszLevel[levelLen] = '\0';
+        level = (EventPipeEventLevel) wcstoul(wszLevel, NULL, 16);
+
+        // Add a new EventPipeSessionProvider.
+        EventPipeSessionProvider *pSessionProvider = new EventPipeSessionProvider(pProviderName, keywords, level);
+        pSession->AddSessionProvider(pSessionProvider);
+
+        // Free the provider name string.
+        if(pProviderName != NULL)
+        {
+            delete[] pProviderName;
+            pProviderName = NULL;
+        }
+    }
 }
 
 void QCALLTYPE EventPipeInternal::Enable(

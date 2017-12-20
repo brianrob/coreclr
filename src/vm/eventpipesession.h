@@ -55,6 +55,13 @@ public:
         m_rundownEnabled = value;
     }
 
+    // Enable all events.
+    // This is used for testing and is controlled via COMPLUS_EnableEventPipe.
+    void EnableAllEvents();
+
+    // Add a new provider to the session.
+    void AddSessionProvider(EventPipeSessionProvider *pProvider);
+
     // Get the session provider for the specified provider if present.
     EventPipeSessionProvider* GetSessionProvider(EventPipeProvider *pProvider);
 };
@@ -76,6 +83,10 @@ public:
     // Create a new list based on the input.
     EventPipeSessionProviderList(EventPipeProviderConfiguration *pConfigs, unsigned int numConfigs);
     ~EventPipeSessionProviderList();
+
+    // Enable all events.
+    // This is used for testing and is controlled via COMPLUS_EnableEventPipe.
+    void EnableAllEvents();
 
     // Add a new session provider to the list.
     void AddSessionProvider(EventPipeSessionProvider *pProvider);
