@@ -369,8 +369,10 @@ void SetCommandLineArgs(LPCWSTR pwzAssemblyPath, int argc, LPCWSTR* argv)
     }
     CONTRACTL_END;
 
+#ifdef FEATURE_PERFTRACING
     // Send the command line to EventPipe.
     EventPipe::SaveCommandLine(pwzAssemblyPath, argc, argv);
+#endif // FEATURE_PERFTRACING
 
     // Send the command line to System.Environment.
     struct _gc
