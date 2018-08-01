@@ -169,7 +169,7 @@ namespace System.Diagnostics.Tracing
                     {
                         // Dispatch the event.
                         ReadOnlySpan<Byte> payload = new ReadOnlySpan<byte>((void*)instanceData.Payload, (int)instanceData.PayloadLength);
-                        DateTime dateTimeStamp = TimeStampToDateTime(instanceData.TimeStamp);
+                        DateTimeOffset dateTimeStamp = TimeStampToDateTimeOffset(instanceData.TimeStamp);
                         RuntimeEventSource.Log.ProcessEvent(instanceData.EventID, instanceData.ThreadID, dateTimeStamp, instanceData.ActivityId, instanceData.ChildActivityId, payload);
                     }
                 }
@@ -183,13 +183,13 @@ namespace System.Diagnostics.Tracing
         }
 
         /// <summary>
-        /// Converts a QueryPerformanceCounter (QPC) timestamp to a UTC DateTime.
+        /// Converts a QueryPerformanceCounter (QPC) timestamp to DateTimeOffset.
         /// </summary>
-        private DateTime TimeStampToDateTime(Int64 timeStamp)
+        private DateTimeOffset TimeStampToDateTimeOffset(Int64 timeStamp)
         {
             if (timeStamp == Int64.MaxValue)
             {
-                return DateTime.MaxValue;
+                return DateTimeOffset.MaxValue;
             }
 
             Debug.Assert((m_syncTimeUtc.Ticks != 0) && (m_syncTimeQPC != 0) && (m_timeQPCFrequency != 0));
@@ -199,7 +199,7 @@ namespace System.Diagnostics.Tracing
                 inTicks = DateTime.MaxTicks;
             }
 
-            return new DateTime(inTicks, DateTimeKind.Utc);
+            return new DateTimeOffset(inTicks, TimeSpan.Zero);
         }
     }
 #endif // FEATURE_PERFTRACING

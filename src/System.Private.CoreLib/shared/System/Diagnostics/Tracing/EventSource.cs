@@ -2043,7 +2043,7 @@ namespace System.Diagnostics.Tracing
         }
 
         // helper for writing to all EventListeners attached the current eventSource.  
-        internal unsafe void WriteToAllListeners(int eventId, uint* osThreadId, DateTime* timeStamp, Guid* activityID, Guid* childActivityID, params object[] args)
+        internal unsafe void WriteToAllListeners(int eventId, uint* osThreadId, DateTimeOffset* timeStamp, Guid* activityID, Guid* childActivityID, params object[] args)
         {
             EventWrittenEventArgs eventCallbackArgs = new EventWrittenEventArgs(this);
             eventCallbackArgs.EventId = eventId;
@@ -4652,9 +4652,9 @@ namespace System.Diagnostics.Tracing
         }
 
         /// <summary>
-        /// Gets a UTC DateTime that specifies when the event was written.
+        /// Gets the date and time when the event was written.
         /// </summary>
-        public DateTime TimeStamp
+        public DateTimeOffset TimeStamp
         {
             get;
             internal set;
@@ -4664,7 +4664,7 @@ namespace System.Diagnostics.Tracing
         internal EventWrittenEventArgs(EventSource eventSource)
         {
             m_eventSource = eventSource;
-            TimeStamp = DateTime.UtcNow;
+            TimeStamp = DateTimeOffset.UtcNow;
         }
         private string m_message;
         private string m_eventName;
