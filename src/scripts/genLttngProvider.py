@@ -552,6 +552,9 @@ def generateLttngFiles(etwmanifest,eventprovider_directory):
             providerName_File = providerName_File.lower()
 
             tracepointprovider_Cmake.write('        "../'+ lttngevntprovTpPre + providerName_File +".cpp" + '"\n')
+        tracepointprovider_Cmake.write("""
+        "${COREPAL_SOURCE_DIR}/src/tracing/statedumpnotifier.cpp"
+        """)
 
         tracepointprovider_Cmake.write("""    )
 
